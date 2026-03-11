@@ -59,7 +59,7 @@ export default function BlogPage() {
     <div className="pt-16 bg-[#F8FAFC] min-h-screen pb-20">
       {/* Header */}
       <section className="bg-white border-b border-[#E5E7EB] py-16 shadow-sm">
-        <div className="page-container max-w-4xl mx-auto">
+        <div className="page-container max-w-[720px] mx-auto">
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
             <div>
               <div className="inline-flex items-center gap-2 bg-[#EFF6FF] text-[#2563EB] text-xs font-semibold px-3 py-1.5 rounded-md mb-4 border border-[#BFDBFE]">
@@ -80,7 +80,7 @@ export default function BlogPage() {
         </div>
       </section>
 
-      <div className="page-container py-10 max-w-7xl">
+      <div className="page-container py-10 max-w-[720px] mx-auto">
         {/* Search & Filters */}
         <div className="flex flex-col sm:flex-row gap-4 mb-6">
           <SearchBar
@@ -111,8 +111,8 @@ export default function BlogPage() {
 
         {/* Posts Grid */}
         {loading ? (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} />)}
+          <div className="flex flex-col gap-6">
+            {Array.from({ length: 4 }).map((_, i) => <SkeletonCard key={i} />)}
           </div>
         ) : paginated.length === 0 ? (
           <div className="text-center py-20 bg-white rounded-2xl border border-[#E5E7EB] shadow-sm mt-4">
@@ -126,7 +126,7 @@ export default function BlogPage() {
             )}
           </div>
         ) : (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="flex flex-col">
             {paginated.map((post) => (
               <PostCard key={post.id} post={post} />
             ))}

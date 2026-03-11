@@ -12,60 +12,62 @@ export default function PostCard({ post }: PostCardProps) {
   const excerpt = post.excerpt || generateExcerpt(post.content);
 
   return (
-    <Link href={`/blog/${post.slug}`} className="group block">
-      <article className="card h-full flex flex-col p-6 group-hover:shadow-lg transition-all duration-300 border border-gray-100">
-        {/* Tags */}
-        {post.tags?.length > 0 && (
-          <div className="flex flex-wrap gap-1.5 mb-3">
-            {post.tags.slice(0, 2).map((tag) => (
-              <Badge key={tag} variant="primary" className="text-[10px]">
-                {tag}
-              </Badge>
-            ))}
+    <article className="group block py-8 border-b border-[#E5E7EB] last:border-0 hover:bg-gray-50/50 transition-colors px-4 -mx-4 rounded-2xl sm:px-6 sm:-mx-6">
+      {/* Author Row */}
+      <div className="flex items-center gap-2.5 mb-3">
+        {post.authorPhotoURL ? (
+          <img
+            src={post.authorPhotoURL}
+            alt={post.authorName}
+            className="w-6 h-6 rounded-full object-cover"
+          />
+        ) : (
+          <div className="w-6 h-6 rounded-full bg-primary-100 flex items-center justify-center text-primary-600 text-[10px] font-bold">
+            {getInitials(post.authorName || 'U')}
           </div>
         )}
+        <p className="text-sm text-[#111827] font-medium">{post.authorName}</p>
+        <span className="text-gray-400 text-xs">•</span>
+        <p className="text-[13px] text-gray-500">{formatDate(post.createdAt)}</p>
+      </div>
 
+      <Link href={`/blog/${post.slug}`} className="block mb-4">
         {/* Title */}
-        <h3 className="font-display font-bold text-gray-900 text-xl mb-2 group-hover:text-primary-600 transition-colors leading-snug">
+        <h2 className="font-display font-bold text-[#111827] text-2xl mb-2 group-hover:text-[#2563EB] transition-colors leading-tight line-clamp-2">
           {post.title}
-        </h3>
+        </h2>
 
         {/* Excerpt */}
-        <p className="text-sm text-gray-500 leading-relaxed flex-1 mb-4">
+        <p className="text-[15px] sm:text-base text-gray-600 leading-[1.6] line-clamp-3 font-serif">
           {excerpt}
         </p>
+      </Link>
 
-        {/* Footer */}
-        <div className="flex items-center justify-between pt-3 border-t border-gray-50">
-          <div className="flex items-center gap-2">
-            {post.authorPhotoURL ? (
-              <img
-                src={post.authorPhotoURL}
-                alt={post.authorName}
-                className="w-7 h-7 rounded-full object-cover"
-              />
-            ) : (
-              <div className="w-7 h-7 rounded-full bg-primary-100 flex items-center justify-center text-primary-600 text-xs font-bold">
-                {getInitials(post.authorName || 'U')}
-              </div>
-            )}
-            <div>
-              <p className="text-xs font-medium text-gray-700">{post.authorName}</p>
-              <p className="text-[10px] text-gray-400">{formatDate(post.createdAt)}</p>
+      {/* Footer / Actions */}
+      <div className="flex items-center justify-between mt-1">
+        <div className="flex items-center gap-4">
+          {post.tags?.length > 0 && (
+            <div className="hidden sm:flex items-center">
+              <span className="bg-[#F3F4F6] text-[#4B5563] text-[11px] font-medium px-2.5 py-1 rounded-full">
+                {post.tags[0]}
+              </span>
             </div>
-          </div>
-          <div className="flex items-center gap-3 text-gray-400">
-            <span className="flex items-center gap-1 text-xs">
-              <Clock className="w-3 h-3" />
-              {post.readTime || estimateReadTime(post.content)} min
-            </span>
-            <span className="flex items-center gap-1 text-xs">
-              <Heart className="w-3 h-3" />
-              {post.likes?.length || 0}
-            </span>
-          </div>
+          )}
+          <span className="flex items-center gap-1 text-[13px] text-gray-500">
+            {post.readTime || estimateReadTime(post.content)} min read
+          </span>
         </div>
-      </article>
-    </Link>
+        
+        <div className="flex items-center gap-4 text-gray-500">
+          <span className="flex items-center gap-1.5 text-[13px] hover:text-[#111827] transition-colors">
+            <Heart className="w-4 h-4" />
+            {post.likes?.length || 0}
+          </span>
+          <span className="flex items-center gap-1.5 text-[13px] hover:text-[#111827] transition-colors">
+            <MessageCircle className="w-4 h-4" />
+          </span>
+        </div>
+      </div>
+    </article>
   );
 }

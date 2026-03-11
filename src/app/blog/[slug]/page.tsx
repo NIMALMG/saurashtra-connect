@@ -96,8 +96,8 @@ export default function BlogPostPage() {
   const isLiked = post.likes?.includes(user?.uid || '');
 
   return (
-    <div className="pt-16 bg-surface">
-      <div className="page-container max-w-3xl py-10">
+    <div className="pt-16 bg-white pb-24">
+      <div className="page-container max-w-[720px] mx-auto py-10 sm:py-16">
         {/* Back */}
         <Link href="/blog" className="flex items-center gap-2 text-sm text-gray-400 hover:text-gray-700 mb-8 transition-colors">
           <ArrowLeft className="w-4 h-4" />
@@ -106,69 +106,91 @@ export default function BlogPostPage() {
 
         {/* Tags */}
         {post.tags?.length > 0 && (
-          <div className="flex flex-wrap gap-2 mb-4">
+          <div className="flex flex-wrap gap-2 mb-6">
             {post.tags.map((tag) => (
-              <Badge key={tag} variant="primary">{tag}</Badge>
+              <span key={tag} className="bg-[#F3F4F6] text-[#4B5563] text-[13px] font-medium px-3 py-1 rounded-full">
+                {tag}
+              </span>
             ))}
           </div>
         )}
 
         {/* Title */}
-        <h1 className="font-display text-4xl md:text-5xl font-bold text-gray-900 leading-tight mb-4">
+        <h1 className="font-display text-[40px] sm:text-[48px] font-bold text-[#111827] leading-[1.1] tracking-tight mb-8">
           {post.title}
         </h1>
 
-        {/* Meta */}
-        <div className="flex flex-wrap items-center gap-5 mb-8 text-sm text-gray-400 border-b border-gray-100 pb-6">
-          <div className="flex items-center gap-2">
-            {post.authorPhotoURL ? (
-              <img src={post.authorPhotoURL} className="w-8 h-8 rounded-full object-cover" alt={post.authorName} />
-            ) : (
-              <div className="w-8 h-8 rounded-full bg-primary-100 text-primary-600 flex items-center justify-center text-xs font-bold">
-                {getInitials(post.authorName || 'A')}
-              </div>
-            )}
-            <span className="font-medium text-gray-700">{post.authorName}</span>
+        {/* Author Meta */}
+        <div className="flex items-center gap-4 mb-8">
+          {post.authorPhotoURL ? (
+            <img src={post.authorPhotoURL} className="w-12 h-12 rounded-full object-cover" alt={post.authorName} />
+          ) : (
+            <div className="w-12 h-12 rounded-full bg-[#EFF6FF] text-[#2563EB] flex items-center justify-center text-lg font-bold">
+              {getInitials(post.authorName || 'A')}
+            </div>
+          )}
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="font-semibold text-[#111827] text-[15px]">{post.authorName}</span>
+              <button className="text-[#2563EB] text-[15px] font-medium hover:text-[#1D4ED8] transition-colors">Follow</button>
+            </div>
+            <div className="flex items-center gap-2 text-[14px] text-[#6B7280] mt-0.5">
+              <span>{estimateReadTime(post.content)} min read</span>
+              <span>·</span>
+              <span>{formatDate(post.createdAt)}</span>
+            </div>
           </div>
-          <span className="flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5" />{formatDate(post.createdAt)}</span>
-          <span className="flex items-center gap-1.5"><Clock className="w-3.5 h-3.5" />{estimateReadTime(post.content)} min read</span>
+        </div>
+
+        {/* Action Bar */}
+        <div className="flex items-center justify-between py-3 border-y border-[#E5E7EB] mb-12">
+          <div className="flex items-center gap-6 text-[#6B7280]">
+            <button
+              onClick={handleLike}
+              disabled={liking}
+              className="flex items-center gap-2 text-[14px] hover:text-[#111827] transition-colors"
+            >
+              <Heart className={`w-5 h-5 ${isLiked ? 'fill-[#EF4444] text-[#EF4444]' : ''}`} />
+              {post.likes?.length || 0}
+            </button>
+            <button className="flex items-center gap-2 text-[14px] hover:text-[#111827] transition-colors">
+              <MessageCircle className="w-5 h-5" />
+              {comments.length}
+            </button>
+          </div>
+          <div className="flex items-center gap-4 text-[#6B7280]">
+            <button
+              onClick={() => { navigator.clipboard.writeText(window.location.href); toast.success('Link copied!'); }}
+              className="flex items-center gap-2 text-[14px] hover:text-[#111827] transition-colors"
+            >
+              <Share2 className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* Content */}
-        <article className="prose prose-gray max-w-none mb-10">
+        <article className="prose prose-lg prose-gray max-w-none mb-16 font-serif leading-[1.8] text-[#374151] prose-headings:font-display prose-headings:font-bold prose-headings:text-[#111827] prose-a:text-[#2563EB] prose-img:rounded-2xl">
           <ReactMarkdown remarkPlugins={[remarkGfm]}>{post.content}</ReactMarkdown>
         </article>
 
-        {/* Actions */}
-        <div className="flex items-center gap-4 py-5 border-t border-b border-gray-100 mb-10">
-          <button
-            onClick={handleLike}
-            disabled={liking}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all ${
-              isLiked
-                ? 'bg-red-50 text-red-500 border border-red-100'
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-            }`}
-          >
-            <Heart className={`w-4 h-4 ${isLiked ? 'fill-red-500' : ''}`} />
-            {post.likes?.length || 0} {isLiked ? 'Liked' : 'Like'}
-          </button>
-          <span className="flex items-center gap-2 text-sm text-gray-400">
-            <MessageCircle className="w-4 h-4" />
-            {comments.length} comments
-          </span>
-          <button
-            onClick={() => { navigator.clipboard.writeText(window.location.href); toast.success('Link copied!'); }}
-            className="ml-auto flex items-center gap-2 text-sm text-gray-400 hover:text-gray-700"
-          >
-            <Share2 className="w-4 h-4" /> Share
-          </button>
+        {/* Bottom Actions */}
+        <div className="flex items-center justify-between py-6 border-t border-[#E5E7EB] mb-16">
+          <div className="flex items-center gap-6 text-[#6B7280]">
+            <button
+              onClick={handleLike}
+              disabled={liking}
+              className="flex items-center gap-2 text-[14px] hover:text-[#111827] transition-colors bg-[#F9FAFB] px-4 py-2 rounded-full border border-[#E5E7EB]"
+            >
+              <Heart className={`w-5 h-5 ${isLiked ? 'fill-[#EF4444] text-[#EF4444]' : ''}`} />
+              {post.likes?.length || 0} claps
+            </button>
+          </div>
         </div>
 
         {/* Comments */}
         <section>
-          <h2 className="font-display font-bold text-2xl text-gray-900 mb-6">
-            Comments ({comments.length})
+          <h2 className="font-display font-bold text-2xl text-[#111827] mb-8">
+            Responses ({comments.length})
           </h2>
 
           {/* Comment Form */}
@@ -198,20 +220,20 @@ export default function BlogPostPage() {
               <p className="text-gray-400 text-center py-8">No comments yet. Be the first!</p>
             ) : (
               comments.map((comment) => (
-                <div key={comment.id} className="card p-4 flex gap-3">
+                <div key={comment.id} className="py-6 border-b border-[#E5E7EB] last:border-0 flex gap-4">
                   {comment.authorPhotoURL ? (
-                    <img src={comment.authorPhotoURL} className="w-8 h-8 rounded-full shrink-0 object-cover" alt={comment.authorName} />
+                    <img src={comment.authorPhotoURL} className="w-10 h-10 rounded-full shrink-0 object-cover" alt={comment.authorName} />
                   ) : (
-                    <div className="w-8 h-8 rounded-full bg-primary-100 text-primary-600 flex items-center justify-center text-xs font-bold shrink-0">
+                    <div className="w-10 h-10 rounded-full bg-[#EFF6FF] text-[#2563EB] flex items-center justify-center text-sm font-bold shrink-0">
                       {getInitials(comment.authorName || 'U')}
                     </div>
                   )}
                   <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-sm font-semibold text-gray-900">{comment.authorName}</span>
-                      <span className="text-xs text-gray-400">{formatRelativeTime(comment.createdAt)}</span>
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-[15px] font-semibold text-[#111827]">{comment.authorName}</span>
+                      <span className="text-sm text-[#6B7280]">{formatRelativeTime(comment.createdAt)}</span>
                     </div>
-                    <p className="text-sm text-gray-600 leading-relaxed">{comment.content}</p>
+                    <p className="text-[15px] text-[#374151] leading-relaxed">{comment.content}</p>
                   </div>
                 </div>
               ))

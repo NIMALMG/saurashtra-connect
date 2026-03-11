@@ -93,91 +93,92 @@ export default function NewPostPage() {
   }
 
   return (
-    <div className="pt-16 bg-surface">
-      <div className="page-container max-w-4xl py-10">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="font-display text-3xl font-bold text-gray-900">New Post</h1>
-            <p className="text-gray-500 mt-1">Share your knowledge with the community</p>
+    <div className="pt-16 bg-white min-h-screen">
+      {/* Top Navigation Bar */}
+      <div className="border-b border-[#E5E7EB] bg-white sticky top-0 z-10">
+        <div className="page-container max-w-[720px] mx-auto h-16 flex items-center justify-between">
+          <div className="flex items-center gap-2 text-sm text-[#6B7280]">
+            <span className="font-medium text-[#111827]">Draft</span>
+            <span>in {userProfile?.displayName || 'Saurashtra Connect'}</span>
           </div>
-          <div className="flex gap-3">
-            <Button
-              variant="secondary"
+          <div className="flex items-center gap-4">
+            <button
+              type="button"
               onClick={() => setPreview(!preview)}
-              icon={preview ? <PenSquare className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              className="text-sm font-medium text-[#6B7280] hover:text-[#111827] transition-colors"
             >
               {preview ? 'Edit' : 'Preview'}
-            </Button>
+            </button>
+            <button
+              onClick={handleSubmit(onSubmit)}
+              disabled={loading}
+              className="bg-[#10B981] hover:bg-[#059669] text-white text-sm font-medium px-4 py-1.5 rounded-full transition-colors disabled:opacity-50"
+            >
+              {loading ? 'Publishing...' : 'Publish'}
+            </button>
           </div>
         </div>
+      </div>
 
+      <div className="page-container max-w-[720px] mx-auto py-10 sm:py-16">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-          <Input
-            label="Post Title"
-            placeholder="An engaging title for your post..."
-            error={errors.title?.message}
+          
+          <input
+            type="text"
+            placeholder="Title"
+            className="w-full text-[40px] sm:text-[48px] font-display font-bold text-[#111827] placeholder:text-[#D1D5DB] border-none outline-none bg-transparent leading-tight focus:ring-0 px-0"
             {...register('title')}
           />
+          {errors.title && <p className="text-red-500 text-sm">{errors.title.message}</p>}
 
           {/* Tags */}
-          <div>
-            <label className="label">Tags (up to 5)</label>
-            <div className="flex gap-2 mb-2 flex-wrap">
+          <div className="py-2">
+            <div className="flex flex-wrap gap-2 mb-2">
               {tags.map((tag) => (
                 <span
                   key={tag}
-                  className="flex items-center gap-1 px-3 py-1 rounded-full bg-primary-100 text-primary-700 text-xs font-medium"
+                  className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#F3F4F6] text-[#4B5563] text-[13px] font-medium"
                 >
-                  <Tag className="w-2.5 h-2.5" />
                   {tag}
                   <button type="button" onClick={() => removeTag(tag)}>
-                    <X className="w-3 h-3 ml-1 hover:text-red-500" />
+                    <X className="w-3.5 h-3.5 hover:text-red-500 transition-colors" />
                   </button>
                 </span>
               ))}
             </div>
-            <div className="flex gap-2">
+            {tags.length < 5 && (
               <input
                 type="text"
                 value={tagInput}
                 onChange={(e) => setTagInput(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addTag(); }}}
-                placeholder="Add a tag (press Enter)"
-                className="input-field flex-1"
-              />
-              <Button type="button" variant="secondary" onClick={addTag} size="sm">
-                Add
-              </Button>
-            </div>
-          </div>
-
-          {/* Content */}
-          <div>
-            <label className="label">Content (Markdown supported)</label>
-            {preview ? (
-              <div className="prose-custom card p-6 min-h-[400px]">
-                <h1 className="font-display font-bold text-3xl text-gray-900 mb-4">{titleValue}</h1>
-                <ReactMarkdown>{contentValue}</ReactMarkdown>
-              </div>
-            ) : (
-              <Textarea
-                placeholder="Write your post in Markdown... Use **bold**, *italic*, # Heading, - lists, etc."
-                rows={20}
-                error={errors.content?.message}
-                hint="Supports full Markdown formatting"
-                {...register('content')}
+                onKeyDown={(e) => { 
+                  if (e.key === 'Enter') { 
+                    e.preventDefault(); 
+                    addTag(); 
+                  }
+                }}
+                placeholder={tags.length === 0 ? "Add tags (press Enter)..." : "Add another tag..."}
+                className="w-full text-[15px] text-[#4B5563] placeholder:text-[#9CA3AF] border-none outline-none bg-transparent focus:ring-0 px-0"
               />
             )}
           </div>
 
-          <div className="flex justify-end gap-3 pt-4 border-t border-gray-100">
-            <Button type="button" variant="ghost" onClick={() => router.back()}>
-              Cancel
-            </Button>
-            <Button type="submit" loading={loading}>
-              Publish Post
-            </Button>
+          {/* Content */}
+          <div className="mt-8">
+            {preview ? (
+              <div className="prose prose-lg prose-gray max-w-none font-serif leading-[1.8] text-[#374151] prose-headings:font-display prose-headings:font-bold prose-headings:text-[#111827] prose-a:text-[#2563EB] min-h-[400px]">
+                <ReactMarkdown>{contentValue}</ReactMarkdown>
+              </div>
+            ) : (
+              <div>
+                <textarea
+                  placeholder="Tell your story..."
+                  className="w-full text-lg sm:text-xl font-serif leading-[1.8] text-[#374151] placeholder:text-[#D1D5DB] border-none outline-none bg-transparent focus:ring-0 px-0 resize-y min-h-[50vh]"
+                  {...register('content')}
+                />
+                {errors.content && <p className="text-red-500 text-sm mt-2">{errors.content.message}</p>}
+              </div>
+            )}
           </div>
         </form>
       </div>
