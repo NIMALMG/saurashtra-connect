@@ -47,7 +47,7 @@ export default function Footer() {
               {[
                 { href: 'https://github.com',                      icon: <Github className="w-4 h-4" />,       label: 'GitHub' },
                 { href: 'https://twitter.com',                     icon: <Twitter className="w-4 h-4" />,      label: 'Twitter' },
-                { href: 'mailto:hello@saurashtraconnect.com',      icon: <Mail className="w-4 h-4" />,         label: 'Email' },
+                { href: 'mailto:saurashtraconnect@gmail.com',      icon: <Mail className="w-4 h-4" />,         label: 'Email' },
               ].map(({ href, icon, label }) => (
                 <a
                   key={label}
