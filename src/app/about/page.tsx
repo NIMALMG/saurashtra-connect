@@ -127,7 +127,7 @@ export default function AboutPage() {
         <div className="page-container max-w-4xl mx-auto">
           <div className="text-center mb-12">
             <Target className="w-10 h-10 text-primary-400 mx-auto mb-4" />
-            <h2 className="font-display text-4xl font-bold mb-4">Our Mission &amp; Goals</h2>
+            <h2 className="font-display text-4xl text-white font-bold mb-4">Our Mission &amp; Goals</h2>
             <p className="text-gray-400 text-lg max-w-2xl mx-auto">
               Saurashtra Connect was built to be the digital home for our language — a living, 
               growing archive powered by the community itself.
