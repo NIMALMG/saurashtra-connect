@@ -135,15 +135,27 @@ export async function addComment(data: Omit<Comment, 'id' | 'createdAt'>) {
 
 // ─── Voice Recordings ────────────────────────────────────────────────────────
 
-export async function getVoiceRecordings(limitCount = 20) {
+export async function getVoiceRecordings(limitCount = 50) {
+  // Avoid composite index requirement by not combining where + orderBy in the query
   const q = query(
     collection(db, 'voiceRecordings'),
     where('status', '==', 'approved'),
-    orderBy('createdAt', 'desc'),
     limit(limitCount)
   );
   const snap = await getDocs(q);
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }) as VoiceRecording);
+  const recordings = snap.docs.map((d) => ({ id: d.id, ...d.data() }) as VoiceRecording);
+  
+  // Sort client-side descending by createdAt
+  return recordings.sort((a, b) => {
+    const getMs = (val: any) => {
+      if (!val) return 0;
+      if (typeof val.toMillis === 'function') return val.toMillis();
+      if (val instanceof Date) return val.getTime();
+      if (typeof val.getTime === 'function') return val.getTime();
+      return 0;
+    };
+    return getMs(b.createdAt) - getMs(a.createdAt);
+  });
 }
 
 export async function addVoiceRecording(data: Omit<VoiceRecording, 'id' | 'createdAt' | 'status'>) {
