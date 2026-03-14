@@ -71,15 +71,18 @@ export default function LeaderboardPage() {
                 let cardClasses = "bg-white border-gray-100";
                 let rankIcon = null;
                 if (rank === 1) {
-                  cardClasses = "bg-yellow-50 border-yellow-400 shadow-xl shadow-yellow-100/50 scale-105 z-10 ring-2 ring-yellow-400";
-                  rankIcon = "🥇";
-                } else if (rank === 2) {
-                  cardClasses = "bg-gray-50 border-gray-300 shadow-lg";
-                  rankIcon = "🥈";
-                } else if (rank === 3) {
-                  cardClasses = "bg-amber-50 border-amber-300 shadow-lg";
-                  rankIcon = "🥉";
+                    cardClasses = "bg-gradient-to-br from-[#FFD700]/25 to-[#FFD700]/5 backdrop-blur-lg border border-[#FFD700]/40 shadow-lg shadow-[#FFD700]/20 scale-105 z-10 ring-1 ring-[#FFD700]/40 transition-all duration-300 hover:shadow-[#FFD700]/50 hover:-translate-y-2 hover:scale-110";
+                    rankIcon = "🥇";
+                } 
+                else if (rank === 2) {
+                    cardClasses = "bg-gradient-to-br from-[#C0C0C0]/25 to-[#C0C0C0]/5 backdrop-blur-lg border border-[#C0C0C0]/40 shadow-lg shadow-[#C0C0C0]/20 transition-all duration-300 hover:shadow-[#C0C0C0]/50 hover:-translate-y-2 hover:scale-105";
+                    rankIcon = "🥈";
+                 } 
+                else if (rank === 3) {
+                    cardClasses = "bg-gradient-to-br from-[#CD7F32]/25 to-[#CD7F32]/5 backdrop-blur-lg border border-[#CD7F32]/40 shadow-lg shadow-[#CD7F32]/20 transition-all duration-300 hover:shadow-[#CD7F32]/50 hover:-translate-y-2 hover:scale-105";
+                    rankIcon = "🥉";
                 }
+                
 
                 return (
                   <Link href={`/profile/${user.uid}`} key={user.uid} className={`block rounded-2xl p-6 text-center transition-transform hover:-translate-y-1 ${cardClasses}`}>
