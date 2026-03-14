@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { Heart, MessageCircle, Clock, Tag } from 'lucide-react';
 import { Post } from '@/types';
-import { formatDate, generateExcerpt, estimateReadTime, getInitials } from '@/lib/utils';
+import { formatDate, generateExcerpt, estimateReadTime, getInitials, formatName } from '@/lib/utils';
 import { Badge } from './ui/Badge';
 
 interface PostCardProps {
@@ -12,48 +12,49 @@ export default function PostCard({ post }: PostCardProps) {
   const excerpt = post.excerpt || generateExcerpt(post.content);
 
   return (
-    <article className="group block py-8 border-b border-[#E5E7EB] last:border-0 hover:bg-gray-50/50 transition-colors px-4 -mx-4 rounded-2xl sm:px-6 sm:-mx-6">
+    <article className="group block bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:-translate-y-1 hover:shadow-lg transition duration-200">
       {/* Author Row */}
       <div className="flex items-center gap-2.5 mb-3">
         {post.authorPhotoURL ? (
           <img
             src={post.authorPhotoURL}
             alt={post.authorName}
-            className="w-6 h-6 rounded-full object-cover"
+            className="w-8 h-8 rounded-full object-cover"
           />
         ) : (
-          <div className="w-6 h-6 rounded-full bg-primary-100 flex items-center justify-center text-primary-600 text-[10px] font-bold">
-            {getInitials(post.authorName || 'U')}
+          <div className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center text-primary-600 text-sm font-bold">
+            {getInitials(formatName(post.authorName) || 'U')}
           </div>
         )}
-        <p className="text-sm text-[#111827] font-medium">{post.authorName}</p>
+        <p className="text-sm text-[#111827] font-medium">{formatName(post.authorName)}</p>
         <span className="text-gray-400 text-xs">•</span>
-        <p className="text-[13px] text-gray-500">{formatDate(post.createdAt)}</p>
+        <p className="text-sm text-gray-500">{formatDate(post.createdAt)}</p>
       </div>
 
       <Link href={`/blog/${post.slug}`} className="block mb-4">
         {/* Title */}
-        <h2 className="font-display font-bold text-[#111827] text-2xl mb-2 group-hover:text-[#2563EB] transition-colors leading-tight line-clamp-2">
+        <h2 className="font-display font-semibold text-gray-900 text-xl mb-2 group-hover:text-primary-600 transition-colors line-clamp-2">
           {post.title}
         </h2>
 
         {/* Excerpt */}
-        <p className="text-[15px] sm:text-base text-gray-600 leading-[1.6] line-clamp-3 font-serif">
+        <p className="text-sm text-gray-500 leading-relaxed line-clamp-2">
           {excerpt}
         </p>
       </Link>
 
       {/* Footer / Actions */}
-      <div className="flex items-center justify-between mt-1">
-        <div className="flex items-center gap-4">
+      <div className="flex items-center justify-between mt-auto pt-2 border-t border-gray-50/50">
+        <div className="flex items-center gap-3">
           {post.tags?.length > 0 && (
-            <div className="hidden sm:flex items-center">
-              <span className="bg-[#F3F4F6] text-[#4B5563] text-[11px] font-medium px-2.5 py-1 rounded-full">
+            <div className="flex items-center">
+              <span className="bg-primary-50 text-primary-700 text-xs font-medium px-2 py-0.5 rounded-full">
                 {post.tags[0]}
               </span>
             </div>
           )}
-          <span className="flex items-center gap-1 text-[13px] text-gray-500">
+          <span className="flex items-center gap-1 text-xs text-gray-400 font-medium">
+            <Clock className="w-3.5 h-3.5" />
             {post.readTime || estimateReadTime(post.content)} min read
           </span>
         </div>

@@ -2,7 +2,7 @@
 
 import { MapPin, Users } from 'lucide-react';
 import { VoiceRecording } from '@/types';
-import { formatDate } from '@/lib/utils';
+import { formatDate, formatName } from '@/lib/utils';
 import { Badge } from './ui/Badge';
 
 interface VoiceCardProps {
@@ -12,7 +12,7 @@ interface VoiceCardProps {
 export default function VoiceCard({ recording }: VoiceCardProps) {
   // Extract initials for the avatar
   const initials = recording.authorName
-    ? recording.authorName.substring(0, 2).toUpperCase()
+    ? formatName(recording.authorName).substring(0, 2).toUpperCase()
     : 'U';
 
   return (
@@ -58,9 +58,9 @@ export default function VoiceCard({ recording }: VoiceCardProps) {
           <div className="w-7 h-7 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center text-[10px] font-bold shrink-0">
             {initials}
           </div>
-          <span className="text-sm font-medium text-gray-700 truncate max-w-[120px]">
-            {recording.authorName}
-          </span>
+          <p className="font-semibold text-gray-900 text-sm truncate">
+            {formatName(recording.authorName)}
+          </p>
         </div>
         <span className="text-xs text-gray-400 shrink-0">
           {formatDate(recording.createdAt)}

@@ -101,9 +101,11 @@ export default function AuthenticatedHome() {
                 <p className="text-[#6B7280] text-lg font-serif">No stories found in your feed.</p>
               </div>
             ) : (
-              posts.map((post) => (
-                <PostCard key={post.id} post={post} />
-              ))
+              <div className="flex flex-col gap-6">
+                {posts.map((post) => (
+                  <PostCard key={post.id} post={post} />
+                ))}
+              </div>
             )}
           </div>
         </main>

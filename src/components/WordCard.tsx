@@ -1,6 +1,6 @@
 import { BookOpen, Volume2, Globe } from 'lucide-react';
 import { Word } from '@/types';
-import { formatDate } from '@/lib/utils';
+import { formatDate, formatName } from '@/lib/utils';
 import { Badge } from './ui/Badge';
 
 interface WordCardProps {
@@ -56,7 +56,7 @@ export default function WordCard({ word }: WordCardProps) {
 
       {/* Footer */}
       <div className="flex items-center justify-between pt-2 border-t border-gray-50">
-        <span className="text-xs text-gray-400">by {word.authorName}</span>
+        <span className="text-xs text-gray-400">by {formatName(word.authorName)}</span>
         <Badge variant={word.status === 'approved' ? 'success' : 'warning'} className="text-[10px]">
           {word.status}
         </Badge>

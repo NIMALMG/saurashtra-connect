@@ -222,8 +222,8 @@ export default function Navbar() {
                 </>
               ) : (
                 <>
-                  <Link href="/join?tab=login" className="btn-secondary text-center text-sm w-full">Sign In</Link>
-                  <Link href="/join?tab=signup" className="btn-primary text-center text-sm w-full">Get Started</Link>
+                  <Link href="/join?tab=login" className="btn-secondary text-center text-sm w-full transition-colors">Sign In</Link>
+                  <Link href="/join?tab=signup" className="btn-primary text-center text-sm w-full transition-transform active:scale-95">Get Started</Link>
                 </>
               )}
             </div>

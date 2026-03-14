@@ -58,3 +58,8 @@ export function getInitials(name: string | undefined | null): string {
     .toUpperCase()
     .slice(0, 2);
 }
+
+export function formatName(name: string | undefined | null): string {
+  if (!name) return 'Unknown';
+  return name.replace(/\s+\d+$/, '').trim();
+}

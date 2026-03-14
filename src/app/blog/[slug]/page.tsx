@@ -9,7 +9,7 @@ import toast from 'react-hot-toast';
 import { getPostBySlug, togglePostLike, getComments, addComment } from '@/lib/firestore';
 import { Post, Comment } from '@/types';
 import { useAuth } from '@/context/AuthContext';
-import { formatDate, formatRelativeTime, estimateReadTime, getInitials } from '@/lib/utils';
+import { formatDate, getInitials, estimateReadTime, formatName, formatRelativeTime } from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
 import { Textarea } from '@/components/ui/Input';
 import { Badge } from '@/components/ui/Badge';
@@ -123,15 +123,15 @@ export default function BlogPostPage() {
         {/* Author Meta */}
         <div className="flex items-center gap-4 mb-8">
           {post.authorPhotoURL ? (
-            <img src={post.authorPhotoURL} className="w-12 h-12 rounded-full object-cover" alt={post.authorName} />
+            <img src={post.authorPhotoURL} className="w-12 h-12 rounded-full object-cover" alt={formatName(post.authorName)} />
           ) : (
             <div className="w-12 h-12 rounded-full bg-[#EFF6FF] text-[#2563EB] flex items-center justify-center text-lg font-bold">
-              {getInitials(post.authorName || 'A')}
+              {getInitials(formatName(post.authorName) || 'A')}
             </div>
           )}
           <div>
             <div className="flex items-center gap-2">
-              <span className="font-semibold text-[#111827] text-[15px]">{post.authorName}</span>
+              <span className="font-semibold text-[#111827] text-[15px]">{formatName(post.authorName)}</span>
               <button className="text-[#2563EB] text-[15px] font-medium hover:text-[#1D4ED8] transition-colors">Follow</button>
             </div>
             <div className="flex items-center gap-2 text-[14px] text-[#6B7280] mt-0.5">
@@ -222,15 +222,15 @@ export default function BlogPostPage() {
               comments.map((comment) => (
                 <div key={comment.id} className="py-6 border-b border-[#E5E7EB] last:border-0 flex gap-4">
                   {comment.authorPhotoURL ? (
-                    <img src={comment.authorPhotoURL} className="w-10 h-10 rounded-full shrink-0 object-cover" alt={comment.authorName} />
+                    <img src={comment.authorPhotoURL} className="w-10 h-10 rounded-full shrink-0 object-cover" alt={formatName(comment.authorName)} />
                   ) : (
                     <div className="w-10 h-10 rounded-full bg-[#EFF6FF] text-[#2563EB] flex items-center justify-center text-sm font-bold shrink-0">
-                      {getInitials(comment.authorName || 'U')}
+                      {getInitials(formatName(comment.authorName) || 'U')}
                     </div>
                   )}
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
-                      <span className="text-[15px] font-semibold text-[#111827]">{comment.authorName}</span>
+                      <span className="text-[15px] font-semibold text-[#111827]">{formatName(comment.authorName)}</span>
                       <span className="text-sm text-[#6B7280]">{formatRelativeTime(comment.createdAt)}</span>
                     </div>
                     <p className="text-[15px] text-[#374151] leading-relaxed">{comment.content}</p>

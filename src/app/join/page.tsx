@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, Suspense } from 'react';
+import { useState, Suspense, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -36,10 +36,26 @@ function JoinContent() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
-  const { signIn, signUp, signInWithGoogle } = useAuth();
+  const { signIn, signUp, signInWithGoogle, user, loading: authLoading } = useAuth();
 
   const signInForm = useForm<SignInData>({ resolver: zodResolver(signInSchema) });
   const signUpForm = useForm<SignUpData>({ resolver: zodResolver(signUpSchema) });
+
+  // Redirect authenticated users away from the join page
+  useEffect(() => {
+    if (!authLoading && user) {
+      router.replace('/');
+    }
+  }, [user, authLoading, router]);
+
+  if (authLoading || user) {
+    return (
+      <div className="min-h-screen bg-cultural-gradient flex flex-col items-center justify-center p-4">
+        <div className="w-10 h-10 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin mb-4" />
+        <p className="text-gray-500 font-medium">Verifying session...</p>
+      </div>
+    );
+  }
 
   const handleSignIn = async (data: SignInData) => {
     setLoading(true);

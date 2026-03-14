@@ -126,7 +126,7 @@ export default function BlogPage() {
             )}
           </div>
         ) : (
-          <div className="flex flex-col">
+          <div className="flex flex-col gap-6">
             {paginated.map((post) => (
               <PostCard key={post.id} post={post} />
             ))}
