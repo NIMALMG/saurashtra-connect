@@ -80,9 +80,9 @@ export default function ProfilePage() {
   return (
     <div className="pt-16 bg-surface min-h-screen flex flex-col">
       {/* Profile Header */}
-      <section className="bg-white py-8 border-b border-gray-100">
-        <div className="page-container max-w-4xl mx-auto px-4 md:px-8">
-          <div className="flex flex-col md:flex-row items-center md:items-start gap-6">
+      <section className="bg-white py-6 md:py-8 border-b border-gray-100">
+        <div className="w-full max-w-4xl mx-auto px-4 md:px-8">
+          <div className="flex flex-col items-center text-center md:flex-row md:items-start md:text-left gap-6">
             <div className="relative shrink-0">
               {showPhoto ? (
                 <img
@@ -133,18 +133,18 @@ export default function ProfilePage() {
         </div>
       </section>
 
-      <div className="page-container max-w-4xl py-6 md:py-8 flex-grow flex flex-col px-4 md:px-0 mx-auto w-full">
+      <div className="w-full max-w-4xl py-6 md:py-8 flex-grow flex flex-col px-4 md:px-8 mx-auto">
         {/* Scrollable Tabs */}
-        <div className="w-full overflow-x-auto pb-4 mb-6 custom-scrollbar">
-          <div className="flex gap-2 w-fit min-w-min border-b border-gray-200 pb-1">
+        <div className="w-full border-b border-gray-200 pb-[1px] mb-6">
+          <div className="flex overflow-x-auto whitespace-nowrap gap-3 pb-2 custom-scrollbar">
             {tabs.map(({ key, label, icon, count }) => (
               <button
                 key={key}
                 onClick={() => setActiveTab(key as Tab)}
-                className={`flex items-center gap-2 px-5 py-3 text-sm font-medium transition-all shrink-0 min-w-[120px] justify-center relative ${
+                className={`flex items-center gap-2 px-5 py-3 text-sm font-medium transition-all flex-shrink-0 min-w-fit justify-center relative ${
                   activeTab === key
-                    ? 'text-gray-900 bg-white shadow-md rounded-t-xl border border-gray-200 border-b-0 -mb-[1px] z-10'
-                    : 'text-gray-500 bg-gray-50 hover:bg-gray-100 rounded-t-xl border border-transparent hover:text-gray-800'
+                    ? 'text-gray-900 bg-white shadow-md rounded-t-xl border border-gray-200 border-b-white z-10'
+                    : 'text-gray-500 bg-gray-50 hover:bg-gray-100 rounded-xl border border-transparent hover:text-gray-800'
                 }`}
               >
                 {icon}

@@ -49,9 +49,10 @@
     color: #ffffff;
   }
 
-  html { scroll-behavior: smooth; }
+  html { scroll-behavior: smooth; height: 100%; }
 
   body {
+    height: 100%;
     background-color: var(--color-surface);
     color: var(--color-text-secondary);
     font-family: 'Inter', sans-serif;
