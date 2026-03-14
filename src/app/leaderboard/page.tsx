@@ -1,25 +1,30 @@
+'use client';
+
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Trophy, Medal, Star, ShieldCheck } from 'lucide-react';
-import { getAllUsers } from '@/lib/firestore'; // Re-use until we add query constraints
 import { getInitials, formatName, BADGE_CONFIG } from '@/lib/utils';
 import { db } from '@/lib/firebase';
 import { User } from '@/types';
-import { collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
+import { collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
 
-async function getLeaderboard(limitCount = 50): Promise<User[]> {
-  try {
-    const q = query(collection(db, 'users'), orderBy('score', 'desc'), limit(limitCount));
-    const snap = await getDocs(q);
-    return snap.docs.map((d) => ({ uid: d.id, ...d.data() } as User));
-  } catch (err) {
-    console.error('Leaderboard query failed, falling back to all users:', err);
-    const users = await getAllUsers(limitCount);
-    return users.sort((a, b) => (b.score || 0) - (a.score || 0));
-  }
-}
+export default function LeaderboardPage() {
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
 
-export default async function LeaderboardPage() {
-  const users = await getLeaderboard(50);
+  useEffect(() => {
+    const q = query(collection(db, 'users'), orderBy('score', 'desc'), limit(50));
+    const unsubscribe = onSnapshot(q, (snap) => {
+      const liveUsers = snap.docs.map(d => ({ uid: d.id, ...d.data() } as User));
+      setUsers(liveUsers);
+      setLoading(false);
+    }, (err) => {
+      console.error('Leaderboard realtime sync failed:', err);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   const top3 = users.slice(0, 3);
   const others = users.slice(3);
@@ -42,7 +47,13 @@ export default async function LeaderboardPage() {
           </div>
         </div>
 
-        {users.length === 0 ? (
+        {loading ? (
+          <div className="flex flex-col gap-4 animate-pulse">
+            <div className="h-40 bg-gray-100 rounded-2xl w-full"></div>
+            <div className="h-20 bg-gray-100 rounded-2xl w-full"></div>
+            <div className="h-20 bg-gray-100 rounded-2xl w-full"></div>
+          </div>
+        ) : users.length === 0 ? (
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-12 text-center text-gray-500">
             No contributors yet.
           </div>
@@ -60,19 +71,18 @@ export default async function LeaderboardPage() {
                 let cardClasses = "bg-white border-gray-100";
                 let rankIcon = null;
                 if (rank === 1) {
-                  cardClasses = "bg-gradient-to-b from-yellow-50 to-white border-yellow-200 shadow-xl shadow-yellow-100 md:scale-105 z-10 ring-2 ring-yellow-400";
+                  cardClasses = "bg-yellow-50 border-yellow-400 shadow-xl shadow-yellow-100/50 scale-105 z-10 ring-2 ring-yellow-400";
                   rankIcon = "🥇";
                 } else if (rank === 2) {
-                  cardClasses = "bg-gradient-to-b from-gray-50 to-white border-gray-300 shadow-md";
+                  cardClasses = "bg-gray-50 border-gray-300 shadow-lg";
                   rankIcon = "🥈";
                 } else if (rank === 3) {
-                  cardClasses = "bg-gradient-to-b from-amber-50 to-white border-amber-200 shadow-md";
+                  cardClasses = "bg-amber-50 border-amber-300 shadow-lg";
                   rankIcon = "🥉";
                 }
 
                 return (
                   <Link href={`/profile/${user.uid}`} key={user.uid} className={`block rounded-2xl p-6 text-center transition-transform hover:-translate-y-1 ${cardClasses}`}>
-                    <div className="text-3xl mb-3">{rankIcon}</div>
                     <div className="relative inline-block mb-3">
                       <img src={avatarUrl} alt={displayName} className={`w-20 h-20 mx-auto rounded-full object-cover ring-4 ${rank === 1 ? 'ring-yellow-400' : rank === 2 ? 'ring-gray-300' : 'ring-amber-300'}`} />
                       {user.badges?.includes('language_guardian') && (
@@ -81,19 +91,23 @@ export default async function LeaderboardPage() {
                         </div>
                       )}
                     </div>
-                    <h3 className="text-lg font-bold text-gray-900 truncate mb-1">{displayName}</h3>
-                    <div className="flex flex-wrap items-center justify-center gap-1.5 mb-3 min-h-[24px]">
+                    
+                    <h3 className="text-lg font-bold text-gray-900 truncate mb-2 flex items-center justify-center gap-2">
+                      <span className="text-2xl">{rankIcon}</span> {displayName}
+                    </h3>
+                    
+                    <div className="flex flex-wrap items-center justify-center gap-1.5 mb-4 min-h-[24px]">
                       {user.badges && user.badges.length > 0 ? (
                         user.badges.map(b => BADGE_CONFIG[b] ? (
-                          <span key={b} className="text-sm" title={BADGE_CONFIG[b].label}>{BADGE_CONFIG[b].icon}</span>
+                          <span key={b} className="text-lg" title={BADGE_CONFIG[b].label}>{BADGE_CONFIG[b].icon}</span>
                         ) : null)
                       ) : (
-                        <span className="text-[11px] text-gray-400">Rising Contributor</span>
+                        <span className="text-xs text-gray-400">Rising Contributor</span>
                       )}
                     </div>
-                    <div className="bg-white/50 py-1.5 rounded-lg border border-black/5">
-                      <div className="text-2xl font-black text-gray-900 leading-none">{user.score || 0}</div>
-                      <div className="text-[10px] text-gray-500 uppercase tracking-widest font-semibold mt-1">Points</div>
+                    
+                    <div className="text-xl font-bold text-gray-900">
+                      {user.score || 0} <span className="text-sm font-medium text-gray-500">Points</span>
                     </div>
                   </Link>
                 );

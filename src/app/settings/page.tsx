@@ -17,7 +17,7 @@ import {
   EmailAuthProvider,
   deleteUser,
 } from 'firebase/auth';
-import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
+import { ref, getDownloadURL } from 'firebase/storage';
 import { doc, updateDoc } from 'firebase/firestore';
 import { auth, storage, db } from '@/lib/firebase';
 import { useAuth } from '@/context/AuthContext';
@@ -72,16 +72,30 @@ function AvatarSection({ user, userProfile, onUploaded }: {
 
     setUploading(true);
     try {
-      const storageRef = ref(storage, `avatars/${user.uid}/profile.${file.name.split('.').pop()}`);
-      const task = uploadBytesResumable(storageRef, file);
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('userId', user.uid);
 
-      const url = await new Promise<string>((resolve, reject) => {
-        task.on('state_changed',
-          (snap) => setProgress((snap.bytesTransferred / snap.totalBytes) * 100),
-          reject,
-          async () => resolve(await getDownloadURL(task.snapshot.ref))
-        );
+      // We fake a slightly staggered progress visually as fetch() native lacks onProgress
+      let fakeProgress = 10;
+      const interval = setInterval(() => {
+        fakeProgress = Math.min(fakeProgress + 15, 90);
+        setProgress(fakeProgress);
+      }, 300);
+
+      const res = await fetch('/api/upload-avatar', {
+        method: 'POST',
+        body: formData,
       });
+      clearInterval(interval);
+      setProgress(100);
+
+      if (!res.ok) {
+        const d = await res.json();
+        throw new Error(d.error || 'Failed to upload photo');
+      }
+
+      const { url } = await res.json();
 
       // Update both Firebase Auth profile and Firestore
       if (auth.currentUser) {
@@ -89,9 +103,9 @@ function AvatarSection({ user, userProfile, onUploaded }: {
         await updateDoc(doc(db, 'users', user.uid), { photoURL: url });
       }
       onUploaded(url);
-      toast.success('Profile photo updated!');
-    } catch {
-      toast.error('Upload failed. Please try again.');
+      toast.success('Profile photo updated in Azure!');
+    } catch (err: any) {
+      toast.error(err.message || 'Upload failed. Please try again.');
       setPreview(null);
     } finally {
       setUploading(false);

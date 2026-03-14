@@ -63,6 +63,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const createUserProfile = async (firebaseUser: FirebaseUser, displayName?: string) => {
     const docRef = doc(db, 'users', firebaseUser.uid);
     const existing = await getDoc(docRef);
+
+    // Helper: Pass external URLs to our Azure API to lock them into our Storage Container
+    const portAvatarToAzure = async (uid: string, url: string) => {
+      if (!url || url.includes('windows.net')) return url;
+      try {
+        const res = await fetch('/api/upload-avatar', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams({ userId: uid, imageUrl: url }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          return data.url; // The new Azure Blob URL
+        }
+      } catch (err) {
+        console.error('Failed to port avatar to Azure:', err);
+      }
+      return url; // Fallback to original if API fails
+    };
+
     if (!existing.exists()) {
       // First-ever sign-in: create the profile document
       const profile: Omit<User, 'uid'> = {
@@ -82,6 +102,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           recordings: 0,
         },
       };
+
+      // Port social image to Azure immediately if present
+      if (profile.photoURL) {
+        profile.photoURL = await portAvatarToAzure(firebaseUser.uid, profile.photoURL);
+        if (auth.currentUser) await updateProfile(auth.currentUser, { photoURL: profile.photoURL });
+      }
+
       await setDoc(docRef, profile);
       setUserProfile({ uid: firebaseUser.uid, ...profile });
     } else {
@@ -93,8 +120,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const authPhoto = firebaseUser.photoURL || '';
       const authName = displayName || firebaseUser.displayName || '';
 
-      if (authPhoto && existingData.photoURL !== authPhoto) {
-        updates.photoURL = authPhoto;
+      if (authPhoto && existingData.photoURL !== authPhoto && !existingData.photoURL?.includes('windows.net')) {
+        // Only port if we don't already have an Azure image locking out the Social one
+        const safeAzureUrl = await portAvatarToAzure(firebaseUser.uid, authPhoto);
+        updates.photoURL = safeAzureUrl;
+        if (auth.currentUser) await updateProfile(auth.currentUser, { photoURL: safeAzureUrl });
       }
       if (authName && existingData.displayName !== authName && !existingData.displayName) {
         updates.displayName = authName;
