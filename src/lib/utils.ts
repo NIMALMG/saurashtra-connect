@@ -59,7 +59,21 @@ export function getInitials(name: string | undefined | null): string {
     .slice(0, 2);
 }
 
-export function formatName(name: string | undefined | null): string {
-  if (!name) return 'Unknown';
-  return name.replace(/\s+\d+$/, '').trim();
+export function formatName(name: string | undefined | null, email?: string | null): string {
+  if (name?.trim()) {
+    return name.replace(/\s+\d+$/, '').trim();
+  }
+  if (email && email.includes('@')) {
+    return email.split('@')[0];
+  }
+  return 'Community Member';
 }
+
+export const BADGE_CONFIG: Record<string, { label: string; icon: string }> = {
+  first_word: { label: 'First Word', icon: '✨' },
+  voice_beginner: { label: 'Voice Contributor', icon: '🎤' },
+  writer: { label: 'Writer', icon: '✍️' },
+  word_contributor: { label: 'Word Contributor', icon: '📚' },
+  voice_keeper: { label: 'Voice Keeper', icon: '🎙️' },
+  language_guardian: { label: 'Language Guardian', icon: '🛡️' },
+};

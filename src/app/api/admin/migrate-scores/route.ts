@@ -44,7 +44,7 @@ export async function POST(req: Request) {
       if (recordingsCount >= 1) badges.push('voice_beginner');
       if (recordingsCount >= 10) badges.push('voice_keeper');
       if (blogsCount >= 3) badges.push('writer');
-      if (computedScore >= 50) badges.push('community_hero');
+      if (computedScore >= 50) badges.push('language_guardian');
 
       // 5. Check if update is strictly necessary (missing or incorrect data)
       const needsUpdate = 

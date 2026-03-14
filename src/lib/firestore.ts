@@ -75,8 +75,8 @@ async function updateUserScore(userId: string, type: ContributionType) {
     }
 
     // Check high level score badge
-    if (currentScore + pointsToAdd >= 50 && !currentBadges.includes('community_hero')) {
-      currentBadges.push('community_hero');
+    if (currentScore + pointsToAdd >= 50 && !currentBadges.includes('language_guardian')) {
+      currentBadges.push('language_guardian');
     }
 
     updates['score'] = increment(pointsToAdd);

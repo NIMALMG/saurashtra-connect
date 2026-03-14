@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation';
 import { BookOpen, Mic, FileText, MapPin, Calendar, Award, Star, ShieldCheck } from 'lucide-react';
 import { getUserProfile, getUserContributions } from '@/lib/firestore';
 import { User, Post, Word, VoiceRecording } from '@/types';
-import { formatDate, getInitials } from '@/lib/utils';
+import { formatDate, getInitials, formatName, BADGE_CONFIG } from '@/lib/utils';
 import PostCard from '@/components/PostCard';
 import WordCard from '@/components/WordCard';
 import VoiceCard from '@/components/VoiceCard';
@@ -76,6 +76,7 @@ export default function ProfilePage() {
   ];
 
   const showPhoto = profile?.photoURL && !imgError;
+  const displayName = profile ? formatName(profile.displayName, profile.email) : 'Community Member';
 
   return (
     <div className="pt-16 bg-surface min-h-screen flex flex-col">
@@ -87,14 +88,16 @@ export default function ProfilePage() {
               {showPhoto ? (
                 <img
                   src={profile!.photoURL}
-                  alt={profile!.displayName}
+                  alt={displayName}
                   onError={() => setImgError(true)}
-                  className="w-24 h-24 rounded-full object-cover ring-4 ring-white shadow-sm"
+                  className="w-24 h-24 rounded-full object-cover ring-4 ring-white shadow-sm bg-white"
                 />
               ) : (
-                <div className="w-24 h-24 rounded-full bg-gradient-to-br from-primary-400 to-secondary-500 flex items-center justify-center text-white text-3xl font-bold ring-4 ring-white shadow-sm">
-                  {getInitials(profile!.displayName)}
-                </div>
+                <img
+                  src={`https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=random`}
+                  alt={displayName}
+                  className="w-24 h-24 rounded-full object-cover ring-4 ring-white shadow-sm bg-white"
+                />
               )}
               {isOwnProfile && (
                 <Link
@@ -109,16 +112,22 @@ export default function ProfilePage() {
             
             <div className="text-center md:text-left flex-1 mt-2 md:mt-0">
               <div className="flex items-center gap-3 justify-center md:justify-start mb-2">
-                <h1 className="font-display font-semibold text-2xl text-gray-900">{profile.displayName}</h1>
+                <h1 className="font-display font-semibold text-2xl text-gray-900">{displayName}</h1>
                 {profile.role === 'admin' && (
                   <Badge variant="primary" className="text-xs shadow-sm">Admin</Badge>
                 )}
-                {profile.badges?.includes('community_hero') && (
-                  <div className="flex items-center gap-1 bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full text-xs font-bold border border-blue-100">
-                    <ShieldCheck className="w-3.5 h-3.5" /> Hero
-                  </div>
-                )}
               </div>
+
+              {profile.badges && profile.badges.length > 0 && (
+                <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 mb-3">
+                  {profile.badges.map(b => BADGE_CONFIG[b] ? (
+                    <div key={b} className="flex items-center gap-1.5 bg-gray-50 text-gray-700 px-2.5 py-1 rounded-full text-xs font-bold border border-gray-200 shadow-sm" title={BADGE_CONFIG[b].label}>
+                      <span>{BADGE_CONFIG[b].icon}</span> {BADGE_CONFIG[b].label}
+                    </div>
+                  ) : null)}
+                </div>
+              )}
+
               {profile.bio && <p className="text-gray-500 mb-3 max-w-md mx-auto md:mx-0 text-sm leading-relaxed">{profile.bio}</p>}
               
               <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 text-sm text-gray-500 mt-2">
