@@ -9,10 +9,10 @@ import { useAuth } from '@/context/AuthContext';
 
 const navLinks = [
   { href: '/',              label: 'Home' },
-  { href: '/about',         label: 'About' },
   { href: '/community',     label: 'Community' },
   { href: '/voice-archive', label: 'Voice Archive' },
   { href: '/blog',          label: 'Blog' },
+  { href: '/leaderboard',   label: 'Leaderboard' },
 ];
 
 export default function Navbar() {

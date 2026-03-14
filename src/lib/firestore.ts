@@ -17,18 +17,78 @@ import {
   increment,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { Post, Word, VoiceRecording, Comment } from '@/types';
+import { Post, Word, VoiceRecording, Comment, User } from '@/types';
 
-// ─── Helper: increment user contribution count ───────────────────────────────
-async function incrementContribution(userId: string) {
+// ─── Gamification & Scoring Engine ──────────────────────────────────────────
+
+type ContributionType = 'word' | 'recording' | 'post';
+
+async function updateUserScore(userId: string, type: ContributionType) {
   try {
-    await updateDoc(doc(db, 'users', userId), {
-      contributionCount: increment(1),
-    });
-  } catch {
-    // Non-blocking — don't fail the main operation if this errors
+    const userRef = doc(db, 'users', userId);
+    const userSnap = await getDoc(userRef);
+    
+    if (!userSnap.exists()) return;
+    
+    const userData = userSnap.data();
+    
+    // Safely fallback current data
+    const currentBlogs = userData.contributions?.blogs || 0;
+    const currentWords = userData.contributions?.words || 0;
+    const currentRecs = userData.contributions?.recordings || 0;
+    const currentScore = userData.score || 0;
+    const currentBadges: string[] = userData.badges || [];
+
+    // Calculate increments
+    let pointsToAdd = 0;
+    const updates: Record<string, any> = {
+      contributionCount: increment(1)
+    };
+
+    if (type === 'word') {
+      pointsToAdd = 1;
+      updates['contributions.words'] = increment(1);
+      
+      if (currentWords + 1 === 1 && !currentBadges.includes('first_word')) {
+        currentBadges.push('first_word');
+      }
+      if (currentWords + 1 === 10 && !currentBadges.includes('word_contributor')) {
+        currentBadges.push('word_contributor');
+      }
+    } else if (type === 'recording') {
+      pointsToAdd = 2;
+      updates['contributions.recordings'] = increment(1);
+      
+      if (currentRecs + 1 === 1 && !currentBadges.includes('voice_beginner')) {
+        currentBadges.push('voice_beginner');
+      }
+      if (currentRecs + 1 === 10 && !currentBadges.includes('voice_keeper')) {
+        currentBadges.push('voice_keeper');
+      }
+    } else if (type === 'post') {
+      pointsToAdd = 3;
+      updates['contributions.blogs'] = increment(1);
+      
+      if (currentBlogs + 1 === 3 && !currentBadges.includes('writer')) {
+        currentBadges.push('writer');
+      }
+    }
+
+    // Check high level score badge
+    if (currentScore + pointsToAdd >= 50 && !currentBadges.includes('community_hero')) {
+      currentBadges.push('community_hero');
+    }
+
+    updates['score'] = increment(pointsToAdd);
+    updates['badges'] = currentBadges;
+
+    // Execute atomic update
+    await updateDoc(userRef, updates);
+  } catch (error) {
+    console.error('Failed to update user score:', error);
   }
 }
+
 
 // ─── Words ──────────────────────────────────────────────────────────────────
 
@@ -67,7 +127,7 @@ export async function addWord(data: Omit<Word, 'id' | 'createdAt' | 'status'>) {
     status: 'pending',
     createdAt: serverTimestamp(),
   });
-  await incrementContribution(data.authorId);
+  await updateUserScore(data.authorId, 'word');
   return ref;
 }
 
@@ -101,7 +161,7 @@ export async function addPost(data: Omit<Post, 'id' | 'createdAt' | 'updatedAt'>
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });
-  await incrementContribution(data.authorId);
+  await updateUserScore(data.authorId, 'post');
   return ref;
 }
 
@@ -164,17 +224,17 @@ export async function addVoiceRecording(data: Omit<VoiceRecording, 'id' | 'creat
     status: 'pending',
     createdAt: serverTimestamp(),
   });
-  await incrementContribution(data.authorId);
+  await updateUserScore(data.authorId, 'recording');
   return ref;
 }
 
 // ─── Users ───────────────────────────────────────────────────────────────────
 
-export async function getAllUsers(limitCount = 50) {
+export async function getAllUsers(limitCount = 50): Promise<User[]> {
   // No orderBy to avoid requiring a Firestore index on joinedAt
   const q = query(collection(db, 'users'), limit(limitCount));
   const snap = await getDocs(q);
-  return snap.docs.map((d) => ({ uid: d.id, ...d.data() }));
+  return snap.docs.map((d) => ({ uid: d.id, ...d.data() } as User));
 }
 
 export async function getUserProfile(uid: string) {

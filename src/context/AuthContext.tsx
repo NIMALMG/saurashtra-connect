@@ -74,6 +74,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         contributionCount: 0,
         bio: '',
         region: '',
+        score: 0,
+        badges: [],
+        contributions: {
+          blogs: 0,
+          words: 0,
+          recordings: 0,
+        },
       };
       await setDoc(docRef, profile);
       setUserProfile({ uid: firebaseUser.uid, ...profile });

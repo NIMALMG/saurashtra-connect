@@ -11,6 +11,14 @@ export interface User {
   role: 'user' | 'admin';
   joinedAt: Timestamp | Date;
   contributionCount: number;
+  // Gamification & Scoring system
+  contributions?: {
+    blogs: number;
+    words: number;
+    recordings: number;
+  };
+  score?: number;
+  badges?: string[];
 }
 
 export interface Post {

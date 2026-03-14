@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
-import { BookOpen, Mic, FileText, MapPin, Calendar, Award } from 'lucide-react';
+import { BookOpen, Mic, FileText, MapPin, Calendar, Award, Star, ShieldCheck } from 'lucide-react';
 import { getUserProfile, getUserContributions } from '@/lib/firestore';
 import { User, Post, Word, VoiceRecording } from '@/types';
 import { formatDate, getInitials } from '@/lib/utils';
@@ -113,6 +113,11 @@ export default function ProfilePage() {
                 {profile.role === 'admin' && (
                   <Badge variant="primary" className="text-xs shadow-sm">Admin</Badge>
                 )}
+                {profile.badges?.includes('community_hero') && (
+                  <div className="flex items-center gap-1 bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full text-xs font-bold border border-blue-100">
+                    <ShieldCheck className="w-3.5 h-3.5" /> Hero
+                  </div>
+                )}
               </div>
               {profile.bio && <p className="text-gray-500 mb-3 max-w-md mx-auto md:mx-0 text-sm leading-relaxed">{profile.bio}</p>}
               
@@ -123,9 +128,13 @@ export default function ProfilePage() {
                 {profile.joinedAt && (
                   <span className="flex items-center gap-1.5 font-medium"><Calendar className="w-4 h-4 text-gray-400" />Joined {formatDate(profile.joinedAt)}</span>
                 )}
+                <span className="flex items-center gap-1.5 font-bold text-amber-700 bg-amber-50 px-2.5 py-1 rounded-md border border-amber-100">
+                  <Star className="w-4 h-4 fill-amber-500 text-amber-500" />
+                  {profile.score || 0} Points
+                </span>
                 <span className="flex items-center gap-1.5 font-medium text-primary-700 bg-primary-50 px-2.5 py-1 rounded-md">
                   <Award className="w-4 h-4 text-primary-500" />
-                  {profile.contributionCount || 0} Total Contributions
+                  {profile.contributionCount || 0} Contributions
                 </span>
               </div>
             </div>
