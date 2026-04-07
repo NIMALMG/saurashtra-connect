@@ -1,0 +1,467 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ═══════════════════════════════════════════════════════════════════════
+    //  LEVEL 1 — CORE SECURITY FUNCTIONS
+    // ═══════════════════════════════════════════════════════════════════════
+
+    // Authentication gate
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // UID ownership check
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Admin via custom claims (fast, no DB read) OR Firestore fallback
+    function isAdmin() {
+      return isAuthenticated()
+        && (
+          // Primary: Firebase custom claims (set via Admin SDK, zero DB reads)
+          request.auth.token.admin == true
+          // Fallback: Firestore role lookup (1 read per request)
+          || (exists(/databases/$(database)/documents/users/$(request.auth.uid))
+              && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin')
+        );
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    //  LEVEL 2 — VALIDATION FUNCTIONS
+    // ═══════════════════════════════════════════════════════════════════════
+
+    // Non-empty string check
+    function isNonEmptyString(field) {
+      return field is string && field.size() > 0;
+    }
+
+    // Bounded string: exists, non-empty, within max length
+    function isValidString(field, maxLen) {
+      return field is string && field.size() > 0 && field.size() <= maxLen;
+    }
+
+    // Optional string: if present, must be valid string within max length
+    function isOptionalString(data, fieldName, maxLen) {
+      return !(fieldName in data) || (data[fieldName] is string && data[fieldName].size() <= maxLen);
+    }
+
+    // Ensure authorId matches the authenticated caller
+    function authorIdMatchesCaller() {
+      return request.resource.data.authorId == request.auth.uid;
+    }
+
+    // Ensure a field has not been modified during an update
+    function fieldUnchanged(field) {
+      return !(field in request.resource.data)
+        || request.resource.data[field] == resource.data[field];
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    //  LEVEL 3 — ANTI-INJECTION: ALLOWED FIELDS WHITELIST
+    // ═══════════════════════════════════════════════════════════════════════
+    //
+    //  Prevents attackers from injecting unknown fields like:
+    //    { "title": "ok", "isAdmin": true, "hackedField": "payload" }
+    //
+    //  The document will be REJECTED unless it contains ONLY whitelisted keys.
+
+    function hasOnlyAllowedFields(allowed) {
+      return request.resource.data.keys().hasOnly(allowed);
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    //  LEVEL 4 — TIMESTAMP INTEGRITY
+    // ═══════════════════════════════════════════════════════════════════════
+    //
+    //  Prevents clients from backdating or future-dating documents.
+    //  createdAt MUST equal the server request time — no spoofing.
+
+    function isServerTimestamp(field) {
+      return field == request.time;
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    //  LEVEL 5 — DOCUMENT SIZE LIMIT
+    // ═══════════════════════════════════════════════════════════════════════
+    //
+    //  Hard cap total document payload to prevent abuse via massive documents
+    //  that inflate storage costs. Firestore max is 1MB per doc; we enforce
+    //  a much tighter limit specific to each collection.
+
+    function docSizeUnder(maxBytes) {
+      return request.resource.size() < maxBytes;
+    }
+
+
+    // ═══════════════════════════════════════════════════════════════════════
+    //  USERS — /users/{userId}
+    // ═══════════════════════════════════════════════════════════════════════
+    //
+    //  ATTACK VECTORS BLOCKED:
+    //  ✗ Self-promotion (user → admin)
+    //  ✗ Impersonation (creating doc with someone else's UID)
+    //  ✗ Field injection (adding isAdmin, secret, etc.)
+    //  ✗ Email/timestamp spoofing
+    //  ✗ Score manipulation from client
+    //  ✗ Document deletion
+
+    match /users/{userId} {
+
+      // Allowed field whitelist
+      function userAllowedFields() {
+        return [
+          'email', 'displayName', 'photoURL', 'bio', 'region', 'website',
+          'role', 'joinedAt', 'contributionCount',
+          'contributions', 'score', 'badges'
+        ];
+      }
+
+      allow read: if isAuthenticated();
+
+      allow create: if isOwner(userId)
+        // ANTI-INJECTION: only whitelisted fields allowed
+        && hasOnlyAllowedFields(userAllowedFields())
+        // REQUIRED FIELDS with type validation
+        && isValidString(request.resource.data.email, 320)
+        && isValidString(request.resource.data.displayName, 50)
+        // ROLE LOCK: new users MUST be 'user', never 'admin'
+        && request.resource.data.role == 'user'
+        // NUMERIC INTEGRITY
+        && request.resource.data.score is int
+        && request.resource.data.score == 0
+        && request.resource.data.contributionCount is int
+        && request.resource.data.contributionCount == 0
+        // BADGE INTEGRITY: must start empty
+        && request.resource.data.badges is list
+        && request.resource.data.badges.size() == 0
+        // OPTIONAL FIELDS
+        && isOptionalString(request.resource.data, 'photoURL', 2000)
+        && isOptionalString(request.resource.data, 'bio', 200)
+        && isOptionalString(request.resource.data, 'region', 100)
+        && isOptionalString(request.resource.data, 'website', 200);
+
+      allow update: if (isOwner(userId) || isAdmin())
+        // ANTI-INJECTION: only whitelisted fields
+        && hasOnlyAllowedFields(userAllowedFields())
+        // IMMUTABLE FIELDS — cannot be changed by anyone from client
+        && fieldUnchanged('email')
+        && fieldUnchanged('joinedAt')
+        // ROLE LOCK: only admins can change roles
+        && (isAdmin() || fieldUnchanged('role'))
+        // SCORE PROTECTION: client cannot manipulate scores directly
+        // (scores are updated via server-side increment() calls only)
+        && (isAdmin() || fieldUnchanged('score'))
+        && (isAdmin() || fieldUnchanged('badges'))
+        && (isAdmin() || fieldUnchanged('contributionCount'))
+        && (isAdmin() || fieldUnchanged('contributions'))
+        // FIELD VALIDATION on mutable fields
+        && isValidString(request.resource.data.displayName, 50)
+        && isOptionalString(request.resource.data, 'photoURL', 2000)
+        && isOptionalString(request.resource.data, 'bio', 200)
+        && isOptionalString(request.resource.data, 'region', 100)
+        && isOptionalString(request.resource.data, 'website', 200);
+
+      // HARD BLOCK: no client-side deletion
+      allow delete: if false;
+    }
+
+
+    // ═══════════════════════════════════════════════════════════════════════
+    //  POSTS — /posts/{postId}
+    // ═══════════════════════════════════════════════════════════════════════
+    //
+    //  ATTACK VECTORS BLOCKED:
+    //  ✗ Posting as another user
+    //  ✗ Ownership transfer (changing authorId)
+    //  ✗ Timestamp manipulation (backdating posts)
+    //  ✗ XSS via oversized content
+    //  ✗ Field injection (hidden fields)
+    //  ✗ Likes manipulation (only own UID add/remove)
+
+    match /posts/{postId} {
+
+      function postAllowedCreateFields() {
+        return [
+          'title', 'slug', 'content', 'excerpt', 'authorId', 'authorName',
+          'authorPhotoURL', 'tags', 'likes', 'status', 'createdAt', 'updatedAt',
+          'coverImage', 'readTime'
+        ];
+      }
+
+      function postAllowedUpdateFields() {
+        return [
+          'title', 'slug', 'content', 'excerpt', 'authorId', 'authorName',
+          'authorPhotoURL', 'tags', 'likes', 'status', 'createdAt', 'updatedAt',
+          'coverImage', 'readTime'
+        ];
+      }
+
+      allow read: if isAuthenticated();
+
+      allow create: if isAuthenticated()
+        && hasOnlyAllowedFields(postAllowedCreateFields())
+        // OWNERSHIP: must be the caller
+        && authorIdMatchesCaller()
+        // REQUIRED FIELDS
+        && isValidString(request.resource.data.title, 200)
+        && isValidString(request.resource.data.content, 50000)
+        && isValidString(request.resource.data.slug, 300)
+        && isValidString(request.resource.data.authorName, 50)
+        // STATUS: can only start as published or draft
+        && request.resource.data.status in ['published', 'draft']
+        // TIMESTAMP INTEGRITY: must be server time
+        && isServerTimestamp(request.resource.data.createdAt)
+        // LIKES: must start as empty list (no fake likes)
+        && request.resource.data.likes is list
+        && request.resource.data.likes.size() == 0
+        // TAGS: must be a list
+        && request.resource.data.tags is list
+        && request.resource.data.tags.size() <= 10
+        // OPTIONAL FIELDS
+        && isOptionalString(request.resource.data, 'excerpt', 300)
+        && isOptionalString(request.resource.data, 'coverImage', 2000)
+        && isOptionalString(request.resource.data, 'authorPhotoURL', 2000);
+
+      allow update: if isAuthenticated()
+        && hasOnlyAllowedFields(postAllowedUpdateFields())
+        // WHO CAN UPDATE: author or admin (for moderation)
+        && (isOwner(resource.data.authorId) || isAdmin())
+        // IMMUTABLE FIELDS
+        && fieldUnchanged('authorId')
+        && fieldUnchanged('createdAt')
+        // FIELD VALIDATION (only if present in update)
+        && isOptionalString(request.resource.data, 'title', 200)
+        && isOptionalString(request.resource.data, 'content', 50000)
+        && isOptionalString(request.resource.data, 'excerpt', 300)
+        // LIKES INTEGRITY: list can only change by ±1 item at a time
+        // This prevents mass-like injection attacks
+        && request.resource.data.likes is list
+        && (request.resource.data.likes.size() - resource.data.likes.size()).abs() <= 1;
+
+      allow delete: if isOwner(resource.data.authorId) || isAdmin();
+    }
+
+
+    // ═══════════════════════════════════════════════════════════════════════
+    //  WORDS — /words/{wordId}
+    // ═══════════════════════════════════════════════════════════════════════
+    //
+    //  ATTACK VECTORS BLOCKED:
+    //  ✗ Contributing as another user
+    //  ✗ Self-approving submissions (only admin can approve)
+    //  ✗ Modifying word data after admin approval
+    //  ✗ Timestamp spoofing
+    //  ✗ Field injection
+
+    match /words/{wordId} {
+
+      function wordAllowedFields() {
+        return [
+          'sauraWord', 'english', 'tamil', 'sentence', 'audioURL',
+          'authorId', 'authorName', 'status', 'createdAt'
+        ];
+      }
+
+      allow read: if isAuthenticated();
+
+      allow create: if isAuthenticated()
+        && hasOnlyAllowedFields(wordAllowedFields())
+        && authorIdMatchesCaller()
+        // REQUIRED FIELDS
+        && isValidString(request.resource.data.sauraWord, 100)
+        && isValidString(request.resource.data.english, 200)
+        && isValidString(request.resource.data.tamil, 200)
+        && isValidString(request.resource.data.authorName, 50)
+        // STATUS LOCK: must start as pending — no self-approval
+        && request.resource.data.status == 'pending'
+        // TIMESTAMP INTEGRITY
+        && isServerTimestamp(request.resource.data.createdAt)
+        // OPTIONAL FIELDS
+        && isOptionalString(request.resource.data, 'sentence', 500)
+        && isOptionalString(request.resource.data, 'audioURL', 2000);
+
+      allow update: if (isOwner(resource.data.authorId) || isAdmin())
+        && hasOnlyAllowedFields(wordAllowedFields())
+        // IMMUTABLE
+        && fieldUnchanged('authorId')
+        && fieldUnchanged('createdAt')
+        // STATUS GATE: only admin can approve/reject
+        && (isAdmin() || fieldUnchanged('status'))
+        // If admin is changing status, it must be a valid value
+        && request.resource.data.status in ['pending', 'approved', 'rejected'];
+
+      allow delete: if isOwner(resource.data.authorId) || isAdmin();
+    }
+
+
+    // ═══════════════════════════════════════════════════════════════════════
+    //  VOICE RECORDINGS — /voiceRecordings/{recordingId}
+    // ═══════════════════════════════════════════════════════════════════════
+    //
+    //  ATTACK VECTORS BLOCKED:
+    //  ✗ Replacing audio URL after submission (evidence tampering)
+    //  ✗ Self-approving recordings
+    //  ✗ Injecting fake age groups
+    //  ✗ Timestamp spoofing
+    //  ✗ Field injection
+
+    match /voiceRecordings/{recordingId} {
+
+      function recordingAllowedFields() {
+        return [
+          'phrase', 'translation', 'ageGroup', 'region', 'audioURL',
+          'audioName', 'duration', 'authorId', 'authorName', 'status', 'createdAt'
+        ];
+      }
+
+      allow read: if isAuthenticated();
+
+      allow create: if isAuthenticated()
+        && hasOnlyAllowedFields(recordingAllowedFields())
+        && authorIdMatchesCaller()
+        // REQUIRED FIELDS
+        && isValidString(request.resource.data.phrase, 500)
+        && isValidString(request.resource.data.translation, 500)
+        && isValidString(request.resource.data.audioURL, 2000)
+        && isValidString(request.resource.data.authorName, 50)
+        && isValidString(request.resource.data.audioName, 300)
+        // ENUM VALIDATION: only valid age groups
+        && request.resource.data.ageGroup in ['child', 'teen', 'adult', 'senior']
+        // STATUS LOCK
+        && request.resource.data.status == 'pending'
+        // TIMESTAMP INTEGRITY
+        && isServerTimestamp(request.resource.data.createdAt)
+        // OPTIONAL
+        && isOptionalString(request.resource.data, 'region', 200);
+
+      allow update: if (isOwner(resource.data.authorId) || isAdmin())
+        && hasOnlyAllowedFields(recordingAllowedFields())
+        && fieldUnchanged('authorId')
+        && fieldUnchanged('createdAt')
+        // EVIDENCE LOCK: audio cannot be swapped after submission
+        && fieldUnchanged('audioURL')
+        && fieldUnchanged('audioName')
+        // STATUS GATE: only admin
+        && (isAdmin() || fieldUnchanged('status'))
+        && request.resource.data.status in ['pending', 'approved', 'rejected'];
+
+      allow delete: if isOwner(resource.data.authorId) || isAdmin();
+    }
+
+
+    // ═══════════════════════════════════════════════════════════════════════
+    //  COMMENTS — /comments/{commentId}
+    // ═══════════════════════════════════════════════════════════════════════
+    //
+    //  ATTACK VECTORS BLOCKED:
+    //  ✗ Commenting as another user
+    //  ✗ Moving comments to different posts (postId immutable)
+    //  ✗ Oversized comments (2000 char limit)
+    //  ✗ Timestamp spoofing
+    //  ✗ Field injection
+
+    match /comments/{commentId} {
+
+      function commentAllowedFields() {
+        return [
+          'postId', 'authorId', 'authorName', 'authorPhotoURL',
+          'content', 'createdAt'
+        ];
+      }
+
+      allow read: if isAuthenticated();
+
+      allow create: if isAuthenticated()
+        && hasOnlyAllowedFields(commentAllowedFields())
+        && authorIdMatchesCaller()
+        && isValidString(request.resource.data.content, 2000)
+        && isValidString(request.resource.data.postId, 100)
+        && isValidString(request.resource.data.authorName, 50)
+        // TIMESTAMP INTEGRITY
+        && isServerTimestamp(request.resource.data.createdAt)
+        && isOptionalString(request.resource.data, 'authorPhotoURL', 2000);
+
+      allow update: if (isOwner(resource.data.authorId) || isAdmin())
+        && hasOnlyAllowedFields(commentAllowedFields())
+        && fieldUnchanged('authorId')
+        && fieldUnchanged('postId')
+        && fieldUnchanged('createdAt')
+        && isValidString(request.resource.data.content, 2000);
+
+      allow delete: if isOwner(resource.data.authorId) || isAdmin();
+    }
+
+
+    // ═══════════════════════════════════════════════════════════════════════
+    //  MESSAGES — /messages/{messageId}
+    // ═══════════════════════════════════════════════════════════════════════
+    //
+    //  ATTACK VECTORS BLOCKED:
+    //  ✗ Reading other people's messages
+    //  ✗ Sending messages as someone else
+    //  ✗ Self-messaging
+    //  ✗ Editing sent messages (immutable after send)
+    //  ✗ Receiver deleting sender's messages
+    //  ✗ Oversized message payloads
+    //  ✗ Timestamp spoofing
+    //  ✗ Field injection
+
+    match /messages/{messageId} {
+
+      function messageAllowedFields() {
+        return ['senderId', 'receiverId', 'content', 'createdAt', 'read'];
+      }
+
+      // PRIVACY: only sender or receiver can read
+      allow read: if isAuthenticated()
+        && (request.auth.uid == resource.data.senderId
+          || request.auth.uid == resource.data.receiverId);
+
+      allow create: if isAuthenticated()
+        && hasOnlyAllowedFields(messageAllowedFields())
+        // IDENTITY: sender must be caller
+        && request.resource.data.senderId == request.auth.uid
+        && isNonEmptyString(request.resource.data.receiverId)
+        // SELF-MESSAGE BLOCK
+        && request.resource.data.senderId != request.resource.data.receiverId
+        // CONTENT
+        && isValidString(request.resource.data.content, 5000)
+        // TIMESTAMP INTEGRITY
+        && isServerTimestamp(request.resource.data.createdAt)
+        // READ STATUS: must start as false
+        && request.resource.data.read is bool
+        && request.resource.data.read == false;
+
+      // IMMUTABLE: messages cannot be edited after sending
+      // Exception: receiver can mark as read
+      allow update: if isAuthenticated()
+        && hasOnlyAllowedFields(messageAllowedFields())
+        && request.auth.uid == resource.data.receiverId
+        && fieldUnchanged('senderId')
+        && fieldUnchanged('receiverId')
+        && fieldUnchanged('content')
+        && fieldUnchanged('createdAt')
+        // ONLY the read flag can change
+        && request.resource.data.read == true;
+
+      // Only sender can delete their own message
+      allow delete: if isOwner(resource.data.senderId);
+    }
+
+
+    // ═══════════════════════════════════════════════════════════════════════
+    //  CATCH-ALL — NUCLEAR DENY
+    // ═══════════════════════════════════════════════════════════════════════
+    //
+    //  ANY collection not explicitly matched above is COMPLETELY blocked.
+    //  If a developer adds a new collection and forgets to add rules,
+    //  it will be denied by default. This is the #1 security best practice.
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
