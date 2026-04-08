@@ -144,14 +144,12 @@ service cloud.firestore {
         && isOptionalString(request.resource.data, 'website', 200);
 
       allow update: if (isOwner(userId) || isAdmin())
-        // ANTI-INJECTION: only whitelisted fields
-        && hasOnlyAllowedFields(userAllowedFields())
-        // IMMUTABLE FIELDS — cannot be changed by anyone from client
+        // IMMUTABLE FIELDS — cannot be changed from client
         && fieldUnchanged('email')
         && fieldUnchanged('joinedAt')
-        // ROLE LOCK: only admins can change roles
+        // ROLE LOCK: only admins can escalate roles
         && (isAdmin() || fieldUnchanged('role'))
-        // FIELD VALIDATION on mutable fields
+        // PROFILE FIELD VALIDATION (only checked if present in update)
         && isOptionalString(request.resource.data, 'displayName', 50)
         && isOptionalString(request.resource.data, 'photoURL', 2000)
         && isOptionalString(request.resource.data, 'bio', 200)
