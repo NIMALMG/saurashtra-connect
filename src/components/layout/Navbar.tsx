@@ -105,12 +105,16 @@ export default function Navbar() {
                       src={userProfile.photoURL}
                       alt={userProfile.displayName || 'User'}
                       className="w-7 h-7 rounded-full object-cover ring-1 ring-[#E5E7EB]"
+                      onError={(e) => {
+                        // Hide broken image, show initials fallback
+                        (e.target as HTMLImageElement).style.display = 'none';
+                        (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
+                      }}
                     />
-                  ) : (
-                    <div className="w-7 h-7 rounded-full bg-[#2563eb] flex items-center justify-center text-xs font-bold text-white shadow-inner">
-                      {getInitials(userProfile?.displayName || 'U')}
-                    </div>
-                  )}
+                  ) : null}
+                  <div className={`w-7 h-7 rounded-full bg-[#2563eb] flex items-center justify-center text-xs font-bold text-white shadow-inner ${userProfile?.photoURL ? 'hidden' : ''}`}>
+                    {getInitials(userProfile?.displayName || 'U')}
+                  </div>
                   <span className="text-sm font-semibold text-[#111827] max-w-[90px] truncate">
                     {userProfile?.displayName?.split(' ')[0] || 'Account'}
                   </span>

@@ -15,6 +15,9 @@ import {
   DocumentSnapshot,
   QueryConstraint,
   increment,
+  arrayUnion,
+  arrayRemove,
+  writeBatch,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Post, Word, VoiceRecording, Comment, User } from '@/types';
@@ -167,11 +170,44 @@ export async function addPost(data: Omit<Post, 'id' | 'createdAt' | 'updatedAt'>
 
 export async function togglePostLike(postId: string, userId: string, currentLikes: string[]) {
   const docRef = doc(db, 'posts', postId);
-  const newLikes = currentLikes.includes(userId)
+  const isLiked = currentLikes.includes(userId);
+
+  // Atomic operation: prevents race conditions with concurrent likes
+  await updateDoc(docRef, {
+    likes: isLiked ? arrayRemove(userId) : arrayUnion(userId),
+  });
+
+  // Return the optimistic result for immediate UI update
+  return isLiked
     ? currentLikes.filter((id) => id !== userId)
     : [...currentLikes, userId];
-  await updateDoc(docRef, { likes: newLikes });
-  return newLikes;
+}
+
+// ─── Delete Post ─────────────────────────────────────────────────────────────
+
+export async function deletePost(postId: string, authorId: string) {
+  const batch = writeBatch(db);
+
+  // 1. Delete the post itself
+  batch.delete(doc(db, 'posts', postId));
+
+  // 2. Cascade: delete all comments belonging to this post
+  const commentsSnap = await getDocs(
+    query(collection(db, 'comments'), where('postId', '==', postId))
+  );
+  commentsSnap.docs.forEach((commentDoc) => {
+    batch.delete(commentDoc.ref);
+  });
+
+  // 3. Decrement the author's blog contribution count and score
+  const userRef = doc(db, 'users', authorId);
+  batch.update(userRef, {
+    'contributions.blogs': increment(-1),
+    contributionCount: increment(-1),
+    score: increment(-3), // Posts are worth 3 points
+  });
+
+  await batch.commit();
 }
 
 // ─── Comments ────────────────────────────────────────────────────────────────

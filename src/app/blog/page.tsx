@@ -128,7 +128,14 @@ export default function BlogPage() {
         ) : (
           <div className="flex flex-col gap-6">
             {paginated.map((post) => (
-              <PostCard key={post.id} post={post} />
+              <PostCard
+                key={post.id}
+                post={post}
+                onDeleted={(id) => {
+                  setPosts((prev) => prev.filter((p) => p.id !== id));
+                  setFiltered((prev) => prev.filter((p) => p.id !== id));
+                }}
+              />
             ))}
           </div>
         )}

@@ -151,14 +151,8 @@ service cloud.firestore {
         && fieldUnchanged('joinedAt')
         // ROLE LOCK: only admins can change roles
         && (isAdmin() || fieldUnchanged('role'))
-        // SCORE PROTECTION: client cannot manipulate scores directly
-        // (scores are updated via server-side increment() calls only)
-        && (isAdmin() || fieldUnchanged('score'))
-        && (isAdmin() || fieldUnchanged('badges'))
-        && (isAdmin() || fieldUnchanged('contributionCount'))
-        && (isAdmin() || fieldUnchanged('contributions'))
         // FIELD VALIDATION on mutable fields
-        && isValidString(request.resource.data.displayName, 50)
+        && isOptionalString(request.resource.data, 'displayName', 50)
         && isOptionalString(request.resource.data, 'photoURL', 2000)
         && isOptionalString(request.resource.data, 'bio', 200)
         && isOptionalString(request.resource.data, 'region', 100)
@@ -225,21 +219,30 @@ service cloud.firestore {
         && isOptionalString(request.resource.data, 'coverImage', 2000)
         && isOptionalString(request.resource.data, 'authorPhotoURL', 2000);
 
+      // LIKE TOGGLE: any authenticated user can like/unlike
+      // All fields except 'likes' must remain unchanged
       allow update: if isAuthenticated()
         && hasOnlyAllowedFields(postAllowedUpdateFields())
-        // WHO CAN UPDATE: author or admin (for moderation)
-        && (isOwner(resource.data.authorId) || isAdmin())
-        // IMMUTABLE FIELDS
         && fieldUnchanged('authorId')
         && fieldUnchanged('createdAt')
-        // FIELD VALIDATION (only if present in update)
-        && isOptionalString(request.resource.data, 'title', 200)
-        && isOptionalString(request.resource.data, 'content', 50000)
-        && isOptionalString(request.resource.data, 'excerpt', 300)
-        // LIKES INTEGRITY: list can only change by ±1 item at a time
-        // This prevents mass-like injection attacks
+        && fieldUnchanged('title')
+        && fieldUnchanged('content')
+        && fieldUnchanged('slug')
+        && fieldUnchanged('status')
+        && fieldUnchanged('tags')
+        && fieldUnchanged('authorName')
         && request.resource.data.likes is list
         && (request.resource.data.likes.size() - resource.data.likes.size()).abs() <= 1;
+
+      // CONTENT EDIT: only author or admin
+      allow update: if isAuthenticated()
+        && hasOnlyAllowedFields(postAllowedUpdateFields())
+        && (isOwner(resource.data.authorId) || isAdmin())
+        && fieldUnchanged('authorId')
+        && fieldUnchanged('createdAt')
+        && isOptionalString(request.resource.data, 'title', 200)
+        && isOptionalString(request.resource.data, 'content', 50000)
+        && isOptionalString(request.resource.data, 'excerpt', 300);
 
       allow delete: if isOwner(resource.data.authorId) || isAdmin();
     }
