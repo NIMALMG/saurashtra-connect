@@ -392,7 +392,12 @@ service cloud.firestore {
         && fieldUnchanged('createdAt')
         && isValidString(request.resource.data.content, 2000);
 
-      allow delete: if isOwner(resource.data.authorId) || isAdmin();
+      // Comment author, admin, OR the post owner can delete
+      // (Post owner needs this for cascade delete when deleting their post)
+      allow delete: if isOwner(resource.data.authorId)
+        || isAdmin()
+        || (isAuthenticated()
+          && get(/databases/$(database)/documents/posts/$(resource.data.postId)).data.authorId == request.auth.uid);
     }
 
 
